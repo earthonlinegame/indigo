@@ -828,7 +828,7 @@ indigo_result indigo_load_properties(indigo_device *device, bool default_propert
 	return handle > 0 ? INDIGO_OK : INDIGO_FAILED;
 }
 
-indigo_result indigo_save_property(indigo_device *device, int *file_handle, indigo_property *property) {
+indigo_result indigo_save_property_to_default(indigo_device *device, int *file_handle, indigo_property *property, bool is_default) {
 	if (property == NULL)
 		return INDIGO_FAILED;
 	if (DEVICE_CONTEXT && pthread_mutex_trylock(&DEVICE_CONTEXT->config_mutex)) {
@@ -852,7 +852,8 @@ indigo_result indigo_save_property(indigo_device *device, int *file_handle, indi
 			bool common_property = false;
 			if (!strcmp(property->name, PROFILE_NAME_PROPERTY_NAME))
 				common_property = true;
-			*file_handle = handle = indigo_open_config_file(property->device, profile, O_WRONLY | O_CREAT | O_TRUNC, common_property ? ".common" : ".config");
+			const char *suffix = common_property ? ".common" : (is_default ? ".default" : ".config");
+			*file_handle = handle = indigo_open_config_file(property->device, profile, O_WRONLY | O_CREAT | O_TRUNC, suffix);
 			if (handle == 0) {
 				if (DEVICE_CONTEXT) {
   pthread_mutex_unlock(&DEVICE_CONTEXT->config_mutex);
@@ -893,6 +894,10 @@ indigo_result indigo_save_property(indigo_device *device, int *file_handle, indi
   pthread_mutex_unlock(&DEVICE_CONTEXT->config_mutex);
 }
 	return INDIGO_OK;
+}
+
+indigo_result indigo_save_property(indigo_device *device, int *file_handle, indigo_property *property) {
+    return indigo_save_property_to_default(device, file_handle, property, false);
 }
 
 indigo_result indigo_save_property_items(indigo_device*device, int *file_handle, indigo_property *property, const int count, const char **items) {
